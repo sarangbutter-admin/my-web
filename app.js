@@ -216,11 +216,31 @@
     const fresh = stat && now() - stat.at <= (stat.sticky ? STICKY_MS : STALE_MS);
     const state = fresh ? stat.state : 'UNKNOWN';
     const word = state === 'ONLINE' ? 'online' : state === 'OFFLINE' ? 'offline' : state === 'WARNING' ? 'needs attention' : 'status unknown';
-    const lk = state === 'ONLINE' ? icon('link', 'lk') : state === 'OFFLINE' ? icon('linkoff', 'lk off') : state === 'WARNING' ? icon('link', 'lk warn') : icon('link', 'lk unk');
+    const blink = (state === 'OFFLINE' || state === 'WARNING') && policyOpen();
+    const lk = blink ? icon(state === 'OFFLINE' ? 'linkoff' : 'link', 'lk warn blink') : state === 'ONLINE' ? icon('link', 'lk') : state === 'OFFLINE' ? icon('linkoff', 'lk off') : state === 'WARNING' ? icon('link', 'lk warn') : icon('link', 'lk unk');
     const plat = PLAT[p];
     return '<button class="pill' + (tap ? ' tap' : '') + '" data-act="refreshStore" data-arg="' + esc(key) + '" aria-label="' + esc(full + ' ' + word + (tap ? ', tap to refresh' : '')) + '">' +
       '<span class="pi" style="background:' + hex6(plat.color) + '">' + plat.mark + '</span>' + (chip ? '<span>' + esc(chip) + '</span>' : '') + lk +
       (stat ? '<span class="age" data-kind="pillage" data-at="' + stat.at + '"></span>' : '') + '</button>';
+  }
+  function policyOpen() { const p = S.data && S.data.policy; return !p || p.open !== false; }
+  /** Running text: stores that are closed / paused (or need a check-in) during open hours; a calm line outside them. */
+  function marqueeHTML() {
+    const d = S.data, p = d.policy || {}, st = (d.status && d.status.stores) || {};
+    let text, cls = 'marq';
+    if (!policyOpen()) { text = 'Closed now · open ' + (p.hours || '') + ' · no orders are read and no merchant app is visited'; cls += ' calm'; }
+    else {
+      if (p.marquee === false) return '';
+      const names = {}; (d.stores || []).forEach((s) => { names[s.id] = s.name || (PLAT[s.platform] || {}).label || s.id; });
+      Object.keys(PLAT).forEach((k) => { names['p:' + k] = PLAT[k].label; });
+      const items = Object.keys(st).filter((k) => now() - st[k].at <= (st[k].sticky ? STICKY_MS : STALE_MS) && (st[k].state === 'OFFLINE' || st[k].state === 'WARNING'))
+        .map((k) => (names[k] || k) + (st[k].state === 'OFFLINE' ? ' is CLOSED / PAUSED' : ' needs attention (check-in or closing soon)')).sort();
+      if (!items.length) return '';
+      text = '⚠  ' + items.join('      •      ');
+    }
+    const speed = Math.min(200, Math.max(10, +p.speed || 40));
+    const dur = Math.round((text.length * 8 + 700) / speed);
+    return '<div class="' + cls + '" role="status" aria-label="' + esc(text) + '"><span style="animation-duration:' + dur + 's">' + esc(text) + '</span></div>';
   }
   function pillsHTML() {
     const d = S.data, st = (d.status && d.status.stores) || {}, ref = (d.status && d.status.refreshed) || {};
@@ -423,11 +443,12 @@
     applyLook();
     if (S.overlay) { setHTML(app, 'app', '<div class="shell">' + overlayHTML() + '</div>'); return; }
     if (!S.data) { setHTML(app, 'app', '<div class="shell"><div class="empty">Loading…</div></div>'); return; }
-    const shell = '<div class="shell"><div id="s-top"></div><div id="s-conn"></div><div class="pills" id="s-pills"></div><div id="s-alarm"></div><div class="chips" id="s-filter"></div><div class="body" id="s-body"></div></div><div id="s-drawer"></div>';
+    const shell = '<div class="shell"><div id="s-top"></div><div id="s-conn"></div><div class="pills" id="s-pills"></div><div id="s-marq"></div><div id="s-alarm"></div><div class="chips" id="s-filter"></div><div class="body" id="s-body"></div></div><div id="s-drawer"></div>';
     if (!$('#s-body')) { cache.app = shell; app.innerHTML = shell; Object.keys(cache).forEach((k) => { if (k !== 'app') delete cache[k]; }); }
     setHTML($('#s-top'), 'top', topHTML());
     setHTML($('#s-conn'), 'conn', (S.connErr ? '<div class="conn">' + esc(S.connErr) + '</div>' : '') + (S.sound && !S.ready ? '<div class="conn" style="background:#6a1b9a">Tap anywhere to turn the alarm sound on</div>' : ''));
     setHTML($('#s-pills'), 'pills', pillsHTML());
+    setHTML($('#s-marq'), 'marq', marqueeHTML());
     setHTML($('#s-alarm'), 'alarm', alarmHTML());
     setHTML($('#s-filter'), 'filter', filterHTML());
     setHTML($('#s-body'), 'body', S.view === 'history' ? historyHTML() : boardHTML());
