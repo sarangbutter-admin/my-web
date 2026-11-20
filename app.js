@@ -126,9 +126,9 @@
       base('h', 'c', 'GF-201', 'Andi', 4, [[2, 'Nasi Goreng'], [1, 'Es Teh']], { stage: 'HOLD', stageAt: t0 - 190000 }),
       base('f', 'c', 'GF-198', 'Rina', 9, [[1, 'Mie Ayam']], { acknowledged: true, status: 'ACCEPTED', prepMinutes: 10, acceptedAt: t0 - min(6), stage: 'FINDING', stageAt: t0 - 130000 }),
       base('w', 'a', 'A-4810', 'Budi', 11, [[2, 'Fudgy Brownies', 'no nuts']], { acknowledged: true, status: 'ACCEPTED', prepMinutes: 15, acceptedAt: t0 - min(9), stage: 'ON_WAY', stageAt: t0 - 200000, etaAt: t0 + min(4), driverName: 'Pak Joko · B 1234 XY', driverStatus: 'ON_THE_WAY' }),
-      base('r', 'b', 'B-7790', 'Siti', 18, [[1, 'Butter Croissant']], { acknowledged: true, status: 'ACCEPTED', prepMinutes: 15, acceptedAt: t0 - min(14) + 60000, stage: 'ARRIVED', stageAt: t0 - 95000, driverName: 'Mas Dedi', driverStatus: 'ARRIVED' }),
+      base('r', 'b', 'B-7790', 'Siti', 18, [[1, 'Butter Croissant']], { acknowledged: true, status: 'ACCEPTED', prepMinutes: 15, acceptedAt: t0 - min(13.5), stage: 'ARRIVED', stageAt: t0 - 95000, driverName: 'Mas Dedi', driverStatus: 'ARRIVED' }),
       base('x', 'b', 'B-7750', 'Joko', 34, [[2, 'Cookie box']], { acknowledged: true, status: 'ACCEPTED', prepMinutes: 15, acceptedAt: t0 - min(30), attention: 'Extra time not set' }),
-      base('g', 'c', 'GF-123', 'Dewi', 40, [[3, 'Nasi Goreng', 'extra spicy'], [1, 'Es Teh']], { acknowledged: true, status: 'ACCEPTED', pin: '4821', prepMinutes: 15, acceptedAt: t0 - min(13) }),
+      base('g', 'c', 'GF-123', 'Dewi', 40, [[3, 'Nasi Goreng', 'extra spicy'], [1, 'Es Teh']], { acknowledged: true, status: 'ACCEPTED', pin: '4821', prepMinutes: 15, acceptedAt: t0 - min(13.5) }),
       base('d', 'a', 'A-4801', 'Rina', 25, [[4, 'Cookie box']], { acknowledged: true, status: 'READY', stage: 'ARRIVED', stageAt: t0 - 240000, updatedAt: t0 - min(5) }),
       base('y1', 'a', 'A-4700', 'Eko', 60 * 26, [[1, 'Chocolate Cake Slice']], { acknowledged: true, status: 'DELIVERED', updatedAt: t0 - 3600000 * 25 }),
     ];
@@ -372,6 +372,8 @@
     return '<div class="scrim" data-act="closemenu"></div><nav class="drawer" aria-label="Menu"><h2>Order Listener</h2><div class="who">' + esc(who) + '</div><hr>' +
       item('view', 'board', 'Kitchen board', S.view === 'board', 'board') + item('view', 'history', 'History', S.view === 'history', 'history') + '<hr>' +
       item('sound', S.sound ? 'vol' : 'mute', S.sound ? 'Sound on (tap to mute)' : 'Turn sound on') +
+      '<div class="volrow"><label for="vol">Alarm volume</label><input type="range" id="vol" min="10" max="100" step="10" value="' + Math.round(vol() * 100) + '"></div>' +
+      item('testSound', 'vol', 'Test the alarm') +
       item('theme', 'theme', 'Switch dark / light') +
       (S.src.demo ? item('addTest', 'plus', 'Add a test order') : '') +
       (S.src.live && d.role !== 'OPEN' ? '<hr>' + item('logout', 'lock', 'Log out') : '') +
@@ -423,7 +425,7 @@
     const shell = '<div class="shell"><div id="s-top"></div><div id="s-conn"></div><div class="pills" id="s-pills"></div><div id="s-alarm"></div><div class="chips" id="s-filter"></div><div class="body" id="s-body"></div></div><div id="s-drawer"></div>';
     if (!$('#s-body')) { cache.app = shell; app.innerHTML = shell; Object.keys(cache).forEach((k) => { if (k !== 'app') delete cache[k]; }); }
     setHTML($('#s-top'), 'top', topHTML());
-    setHTML($('#s-conn'), 'conn', S.connErr ? '<div class="conn">' + esc(S.connErr) + '</div>' : '');
+    setHTML($('#s-conn'), 'conn', (S.connErr ? '<div class="conn">' + esc(S.connErr) + '</div>' : '') + (S.sound && !S.ready ? '<div class="conn" style="background:#6a1b9a">Tap anywhere to turn the alarm sound on</div>' : ''));
     setHTML($('#s-pills'), 'pills', pillsHTML());
     setHTML($('#s-alarm'), 'alarm', alarmHTML());
     setHTML($('#s-filter'), 'filter', filterHTML());
@@ -458,23 +460,62 @@
   }
 
   // ------------------------------------------------------------------ sound
-  function audio() { if (!S.ac) { const C = window.AudioContext || window.webkitAudioContext; if (C) { try { S.ac = new C(); } catch (e) { /* none */ } } } return S.ac; }
-  function beep(freq, dur, at) {
-    const a = audio(); if (!a || a.state !== 'running') return;
-    const o = a.createOscillator(), g = a.createGain(); o.type = 'sine'; o.frequency.value = freq;
-    const t0 = a.currentTime + (at || 0); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.4, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + dur + 0.05);
+  // The alarm is a generated WAV played through an <audio> element, not a quiet Web Audio beep:
+  //  - a hard-edged siren near full scale (about 9 dB louder than a plain sine at the same setting)
+  //  - loops until every order is accepted, like the app
+  //  - an <audio> element is not muted by the iPhone silent switch the way Web Audio is
+  // The device's own media volume still sets the final loudness: turn it up.
+  const SR = 22050;
+  function makeWav(parts) { // parts: [[hz, seconds], ...]; hz 0 = silence
+    let total = 0; parts.forEach((q) => { total += Math.round(q[1] * SR); });
+    const buf = new ArrayBuffer(44 + total * 2), v = new DataView(buf);
+    const w = (o, str) => { for (let k = 0; k < str.length; k++) v.setUint8(o + k, str.charCodeAt(k)); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + total * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+    v.setUint16(22, 1, true); v.setUint32(24, SR, true); v.setUint32(28, SR * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    w(36, 'data'); v.setUint32(40, total * 2, true);
+    // build the samples, then scale the loudest one to 97% of full scale (louder, without clipping)
+    const x = new Float32Array(total); let at = 0, peak = 0.0001;
+    parts.forEach((q) => {
+      const f = q[0], n = Math.round(q[1] * SR);
+      for (let k = 0; k < n; k++, at++) {
+        if (f > 0) {
+          const ph = 2 * Math.PI * f * k / SR;
+          const y = (Math.tanh(2.2 * Math.sin(ph)) + 0.25 * Math.sin(3 * ph)) * Math.min(1, k / (SR * 0.006), (n - k) / (SR * 0.006)); // square-ish, short fades
+          x[at] = y; if (Math.abs(y) > peak) peak = Math.abs(y);
+        }
+      }
+    });
+    for (let k = 0; k < total; k++) v.setInt16(44 + k * 2, Math.round((x[k] / peak) * 0.97 * 32767), true);
+    return new Blob([buf], { type: 'audio/wav' });
   }
-  function resumeAudio() { const a = audio(); if (a && a.state !== 'running') a.resume().catch(() => {}); }
+  const ALARM = [[880, 0.22], [660, 0.22], [880, 0.22], [660, 0.22], [0, 0.3]];
+  const CHIME = [[988, 0.18], [1319, 0.32]];
+  const vol = () => { const v = Number(LS.get('vol')); return (v >= 10 && v <= 100 ? v : 100) / 100; };
+  function sounds() {
+    if (!S.alarm) {
+      S.alarm = new Audio(URL.createObjectURL(makeWav(ALARM))); S.alarm.loop = true; S.alarm.preload = 'auto';
+      S.chime = new Audio(URL.createObjectURL(makeWav(CHIME))); S.chime.preload = 'auto';
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* not supported */ }
+    }
+    S.alarm.volume = vol(); S.chime.volume = vol();
+    return S;
+  }
+  // a browser only allows sound after a tap: unlock both players inside one
+  function unlockAudio() {
+    sounds();
+    const un = (a) => a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
+    un(S.alarm); un(S.chime);
+    S.ready = true;
+  }
+  function playChime() { if (!S.sound) return; sounds(); S.chime.currentTime = 0; S.chime.play().catch(() => { S.ready = false; }); }
   function soundLoop() {
-    if (!S.sound || !S.data) return;
-    if (unacked().length) { S.ringTick++; if (S.ringTick % 2 === 1) { beep(880, 0.25, 0); beep(660, 0.3, 0.3); } } else S.ringTick = 0;
+    if (!S.sound || !S.data || !S.alarm) return;
+    const want = S.ready && unacked().length > 0;
+    if (want && S.alarm.paused) S.alarm.play().catch(() => { S.ready = false; render(); });
+    if (!want && !S.alarm.paused) { S.alarm.pause(); S.alarm.currentTime = 0; }
   }
   function chimeIfHoldLifted(orders) {
-    orders.forEach((o) => {
-      if (S.holds[o.id] === 'HOLD' && o.stage !== 'HOLD' && S.sound) { beep(988, 0.2, 0); beep(1319, 0.35, 0.22); }
-      S.holds[o.id] = o.stage;
-    });
+    orders.forEach((o) => { if (S.holds[o.id] === 'HOLD' && o.stage !== 'HOLD') playChime(); S.holds[o.id] = o.stage; });
   }
 
   // ------------------------------------------------------------------ networking
@@ -507,7 +548,7 @@
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2600); }
 
   // ------------------------------------------------------------------ events
-  document.addEventListener('pointerdown', () => { if (S.sound) resumeAudio(); }, { passive: true });
+  document.addEventListener('pointerdown', () => { if (S.sound && !S.ready) { unlockAudio(); render(); } }, { passive: true });
   document.addEventListener('click', async (e) => {
     const el = e.target.closest('[data-act]'); if (!el) return;
     const a = el.dataset.act, id = el.dataset.id, arg = el.dataset.arg;
@@ -527,7 +568,8 @@
       case 'menu': S.menu = true; return render();
       case 'closemenu': S.menu = false; return render();
       case 'view': S.view = arg; S.menu = false; return render();
-      case 'sound': S.sound = !S.sound; LS.set('sound', S.sound ? '1' : '0'); if (S.sound) { resumeAudio(); setTimeout(() => { beep(880, 0.2, 0); beep(660, 0.25, 0.25); }, 80); } S.menu = false; return render();
+      case 'sound': S.sound = !S.sound; LS.set('sound', S.sound ? '1' : '0'); if (S.sound) { unlockAudio(); setTimeout(() => { S.chime.currentTime = 0; S.chime.play().catch(() => {}); }, 120); } else if (S.alarm) { S.alarm.pause(); S.alarm.currentTime = 0; } S.menu = false; return render();
+      case 'testSound': { S.sound = true; LS.set('sound', '1'); unlockAudio(); setTimeout(() => { S.alarm.currentTime = 0; S.alarm.play().catch(() => {}); setTimeout(() => { if (!unacked().length) { S.alarm.pause(); S.alarm.currentTime = 0; } }, 2600); }, 150); toast('Playing the alarm for a moment'); return render(); }
       case 'theme': { const cur = document.documentElement.getAttribute('data-theme'); S.themePref = cur === 'dark' ? 'LIGHT' : 'DARK'; LS.set('theme', S.themePref); S.menu = false; return render(); }
       case 'addTest': S.menu = false; return act('addTest');
       case 'logout': await S.src.logout(); S.data = null; S.menu = false; S.overlay = 'login'; return render();
@@ -547,6 +589,7 @@
       case 'retry': S.overlay = null; return connect();
     }
   });
+  document.addEventListener('input', (e) => { if (e.target.id === 'vol') { LS.set('vol', e.target.value); if (S.alarm) { S.alarm.volume = vol(); S.chime.volume = vol(); } } });
   document.addEventListener('change', (e) => {
     if (e.target.id === 'hfrom') { S.hist.from = e.target.value; if (!S.hist.to || S.hist.to < S.hist.from) S.hist.to = S.hist.from; render(); }
     if (e.target.id === 'hto') { S.hist.to = e.target.value; render(); }
@@ -560,5 +603,5 @@
   else { S.mode = 'phone'; S.src = phoneSource(); connect(); }
   setInterval(() => { if (S.mode === 'demo' || S.mode === 'phone') poll(); }, 2000);
   setInterval(() => { tick(); soundLoop(); }, 1000);
-  window.__kds = { S, render, tick }; // handy for tests
+  window.__kds = { S, render, tick, makeWav, ALARM, CHIME, SR }; // handy for tests
 })();
