@@ -33,7 +33,7 @@ svg.i { width: 22px; height: 22px; fill: currentColor; flex: none; }
 .pill.tap { min-height: 48px; }
 .pill .age { font-size: 11px; font-weight: 400; color: var(--muted); }
 .pi { width: 22px; height: 22px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex: none; }
-.lk { color: #2e9e50; } .lk.off { color: #e5484d; } .lk.unk { color: #8a9199; }
+.lk { color: #2e9e50; } .lk.off { color: #e5484d; } .lk.unk { color: #8a9199; } .lk.warn { color: #f5b301; }
 .pill.printer { padding-left: 10px; }
 
 /* ---------- alarm strip ---------- */

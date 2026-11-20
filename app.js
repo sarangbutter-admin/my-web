@@ -40,6 +40,7 @@
   const HIST = ['READY', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'];
   const isHistory = (o) => HIST.indexOf(o.status) >= 0;
   const STALE_MS = 10 * 60 * 1000;
+  const STICKY_MS = 6 * 60 * 60 * 1000; // a reading that came from a notification (shop closed / check-in)
 
   // ------------------------------------------------------------------ icons (Material paths)
   const PATH = {
@@ -146,7 +147,7 @@
         }
         return {
           now, name: 'Demo kitchen', user: '', role: 'ADMIN', orders: JSON.parse(JSON.stringify(orders)), stores,
-          status: { stores: { a: { state: 'ONLINE', at: now }, b: { state: 'OFFLINE', at: now - 20000 }, c: { state: 'ONLINE', at: now - 5000 } }, refreshed: { a: now - 25000 } },
+          status: { stores: { a: { state: 'ONLINE', at: now }, b: { state: 'OFFLINE', at: now - 20000 }, c: { state: 'WARNING', at: now - 5000, sticky: true } }, refreshed: { a: now - 25000 } },
           printer: 'CONNECTED', settings: { warnMin: 10, lateMin: 20, theme: 'DARK', bg: '', text: '', button: '', font: 'DEFAULT' },
         };
       },
@@ -212,10 +213,10 @@
   }
 
   function pillHTML(p, chip, key, full, stat, refreshed, tap) {
-    const fresh = stat && now() - stat.at <= STALE_MS;
+    const fresh = stat && now() - stat.at <= (stat.sticky ? STICKY_MS : STALE_MS);
     const state = fresh ? stat.state : 'UNKNOWN';
-    const word = state === 'ONLINE' ? 'online' : state === 'OFFLINE' ? 'offline' : 'status unknown';
-    const lk = state === 'ONLINE' ? icon('link', 'lk') : state === 'OFFLINE' ? icon('linkoff', 'lk off') : icon('link', 'lk unk');
+    const word = state === 'ONLINE' ? 'online' : state === 'OFFLINE' ? 'offline' : state === 'WARNING' ? 'needs attention' : 'status unknown';
+    const lk = state === 'ONLINE' ? icon('link', 'lk') : state === 'OFFLINE' ? icon('linkoff', 'lk off') : state === 'WARNING' ? icon('link', 'lk warn') : icon('link', 'lk unk');
     const plat = PLAT[p];
     return '<button class="pill' + (tap ? ' tap' : '') + '" data-act="refreshStore" data-arg="' + esc(key) + '" aria-label="' + esc(full + ' ' + word + (tap ? ', tap to refresh' : '')) + '">' +
       '<span class="pi" style="background:' + hex6(plat.color) + '">' + plat.mark + '</span>' + (chip ? '<span>' + esc(chip) + '</span>' : '') + lk +
