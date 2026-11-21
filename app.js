@@ -227,20 +227,24 @@
   /** Running text: stores that are closed / paused (or need a check-in) during open hours; a calm line outside them. */
   function marqueeHTML() {
     const d = S.data, p = d.policy || {}, st = (d.status && d.status.stores) || {};
-    let text, cls = 'marq';
+    let text, html = '', cls = 'marq';
     if (!policyOpen()) { text = 'Closed now · open ' + (p.hours || '') + ' · no orders are read and no merchant app is visited'; cls += ' calm'; }
     else {
       if (p.marquee === false) return '';
-      const names = {}; (d.stores || []).forEach((s) => { names[s.id] = s.name || (PLAT[s.platform] || {}).label || s.id; });
-      Object.keys(PLAT).forEach((k) => { names['p:' + k] = PLAT[k].label; });
+      const names = {}, colors = {}; (d.stores || []).forEach((s) => { names[s.id] = s.name || (PLAT[s.platform] || {}).label || s.id; colors[s.id] = s.color; });
+      Object.keys(PLAT).forEach((k) => { names['p:' + k] = PLAT[k].label; colors['p:' + k] = PLAT[k].color; });
       const items = Object.keys(st).filter((k) => now() - st[k].at <= (st[k].sticky ? STICKY_MS : STALE_MS) && (st[k].state === 'OFFLINE' || st[k].state === 'WARNING'))
-        .map((k) => (names[k] || k) + (st[k].state === 'OFFLINE' ? ' is CLOSED / PAUSED' : ' needs attention (check-in or closing soon)')).sort();
+        .map((k) => ({ name: names[k] || k, color: colors[k], off: st[k].state === 'OFFLINE' })).sort((a, b) => a.name.localeCompare(b.name));
       if (!items.length) return '';
-      text = '⚠  ' + items.join('      •      ');
+      text = '⚠ ' + items.map((i) => i.name + (i.off ? ' is CLOSED / PAUSED' : ' needs attention')).join(' • ');
+      html = '⚠&nbsp; ' + items.map((i) => {
+        const c = i.color ? hex6(i.color) : '#888888', fg = onColor(c);
+        return '<b class="mq-store" style="background:' + c + ';color:' + fg + '">' + esc(i.name) + '</b> <b class="mq-bad">' + (i.off ? 'CLOSED / PAUSED' : 'NEEDS ATTENTION') + '</b>';
+      }).join('&nbsp;&nbsp; • &nbsp;&nbsp;');
     }
     const speed = Math.min(200, Math.max(10, +p.speed || 40));
     const dur = Math.round((text.length * 8 + 700) / speed);
-    return '<div class="' + cls + '" role="status" aria-label="' + esc(text) + '"><span style="animation-duration:' + dur + 's">' + esc(text) + '</span></div>';
+    return '<div class="' + cls + '" role="status" aria-label="' + esc(text) + '"><span style="animation-duration:' + dur + 's">' + (html || esc(text)) + '</span></div>';
   }
   function pillsHTML() {
     const d = S.data, st = (d.status && d.status.stores) || {}, ref = (d.status && d.status.refreshed) || {};
