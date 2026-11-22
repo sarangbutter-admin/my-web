@@ -185,3 +185,16 @@ html[data-theme="light"] .attn { background: #ffe0b2; }
 .hist .bar .btn, .hist .bar .textbtn, .hist .btn.small { min-height: 34px; font-size: 13px; padding: 0 12px; }
 .btn.small { min-height: 38px; font-size: 14px; padding: 0 14px; }
 .tab { min-height: 42px; font-size: 15px; }
+
+/* ---------- status button + search (same as the phone) ---------- */
+.opwrap { position: relative; display: inline-flex; }
+.op { border: 0; border-radius: 16px; min-height: 28px; padding: 0 10px; font-size: 12px; font-weight: 700; color: #fff; background: #2e7d32; position: relative; }
+.op::after { content: ""; position: absolute; inset: -8px 0; }
+.op.paused { background: #f5b301; color: #1a1a1a; } .op.closed { background: #5f6368; }
+.opmenu { position: absolute; right: 0; top: 36px; z-index: 12; min-width: 220px; background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.35); padding: 6px; }
+.opmenu button { display: block; width: 100%; text-align: left; min-height: 44px; padding: 0 12px; background: transparent; border: 0; border-radius: 8px; font-size: 15px; }
+.opmenu button:hover { background: var(--chip); }
+.opnote { font-size: 12px; color: var(--muted); padding: 6px 12px 8px; }
+.search { padding: 2px 12px 4px; } .search input { width: 100%; min-height: 40px; border-radius: 20px; border: 1px solid var(--line); background: var(--surface); color: var(--text); padding: 0 14px; font: inherit; font-size: 15px; }
+.top h1 { min-width: 0; overflow: hidden; }
+@media (max-width: 520px) { .top h1 .ttl { display: none; } .top .icon-btn { min-width: 42px; padding: 0 6px; } }

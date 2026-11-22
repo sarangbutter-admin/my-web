@@ -45,6 +45,8 @@
   // ------------------------------------------------------------------ icons (Material paths)
   const PATH = {
     menu: 'M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z',
+    search: 'M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z',
+    close: 'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
     refresh: 'M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z',
     link: 'M3.9,12c0,-1.71 1.39,-3.1 3.1,-3.1h4L11,7L7,7c-2.76,0 -5,2.24 -5,5s2.24,5 5,5h4v-1.9L7,15.1c-1.71,0 -3.1,-1.39 -3.1,-3.1zM8,13h8v-2L8,11v2zM17,7h-4v1.9h4c1.71,0 3.1,1.39 3.1,3.1s-1.39,3.1 -3.1,3.1h-4L13,17h4c2.76,0 5,-2.24 5,-5s-2.24,-5 -5,-5z',
     linkoff: 'M17,7h-4v1.9h4c1.71,0 3.1,1.39 3.1,3.1 0,1.43 -0.98,2.63 -2.31,3.01l1.48,1.48C20.55,15.67 22,13.99 22,12c0,-2.76 -2.24,-5 -5,-5zM2,4.27l3.11,3.11C3.29,8.12 2,9.91 2,12c0,2.76 2.24,5 5,5h4v-1.9L7,15.1c-1.71,0 -3.1,-1.39 -3.1,-3.1 0,-1.72 1.4,-3.1 3.1,-3.1h0.01L8.73,11H8v2h2.73L13,15.27V17h1.73l4.01,4L20,19.74 3.27,3 2,4.27zM16,11h-2.73l2,2H16v-2z',
@@ -68,7 +70,7 @@
     mode: 'boot', // boot | start | demo | phone
     src: null, data: null, view: 'board', filter: '', tab: 0,
     hist: { range: 'today', from: '', to: '' },
-    menu: false, overlay: null, overlayErr: '', connErr: '',
+    menu: false, query: '', searchOpen: false, pauseUntil: 0, opMenu: false, overlay: null, overlayErr: '', connErr: '',
     sound: LS.get('sound') === '1', themePref: LS.get('theme'),
     armed: null, holds: {}, ringTick: 0, helloInfo: null,
   };
@@ -346,7 +348,7 @@
 
   function boardHTML() {
     const t = now(); const wide = window.matchMedia('(min-width: 800px)').matches;
-    const orders = S.data.orders.filter((o) => !S.filter || o.storeId === S.filter);
+    const orders = S.data.orders.filter((o) => (!S.filter || o.storeId === S.filter) && matchQ(o));
     const by = { NEW: [], ACCEPTED: [], READY: [] };
     orders.forEach((o) => { const c = colOf(o, t); if (c) by[c].push(o); });
     by.NEW.sort((a, b) => a.createdAt - b.createdAt); by.ACCEPTED.sort((a, b) => a.createdAt - b.createdAt); by.READY.sort((a, b) => b.updatedAt - a.updatedAt);
@@ -382,7 +384,7 @@
   }
   function historyHTML() {
     const [lo, hi] = dayBounds();
-    const list = S.data.orders.filter((o) => isHistory(o) && (!S.filter || o.storeId === S.filter) && o.createdAt >= lo && o.createdAt < hi).sort((a, b) => b.updatedAt - a.updatedAt);
+    const list = S.data.orders.filter((o) => isHistory(o) && matchQ(o) && (!S.filter || o.storeId === S.filter) && o.createdAt >= lo && o.createdAt < hi).sort((a, b) => b.updatedAt - a.updatedAt);
     const r = S.hist.range;
     const chip = (k, label) => '<button class="chip" data-act="histrange" data-arg="' + k + '" aria-pressed="' + (r === k) + '">' + label + '</button>';
     return '<div class="hist"><div class="bar">' + chip('today', 'Today') + chip('yesterday', 'Yesterday') + chip('custom', r === 'custom' ? esc(histLabel()) : 'Custom') + '</div>' +
@@ -408,11 +410,32 @@
       '<div class="ver">Web kitchen screen. The KDS phone keeps ringing and printing.</div></nav>';
   }
 
+  /** Same fields the phone searches: order number, customer, items, store, driver, note, PIN. */
+  function matchQ(o) {
+    const q = (S.query || '').trim().toLowerCase(); if (!q) return true;
+    const st = (S.data.stores || []).find((s) => s.id === o.storeId);
+    const hay = [o.orderNo, o.displayNo, o.customerName, o.driverName, o.note, o.pin, o.sourceName, st && st.name, st && st.chip, (PLAT[o.platform] || {}).label]
+      .concat((o.items || []).map((i) => i.name)).join(' ').toLowerCase();
+    return q.split(/\s+/).every((w) => hay.indexOf(w) >= 0);
+  }
+  function opState() {
+    const p = (S.data && S.data.policy) || {}; const until = Math.max(S.pauseUntil || 0, p.pausedUntil || 0);
+    if (!policyOpen()) return { k: 'closed', label: 'Closed', tip: 'Closed now. Opens ' + (p.hours || '') };
+    if (until > now()) { const d = new Date(until); return { k: 'paused', label: 'Paused ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()), tip: 'Paused: no merchant app is visited until then' }; }
+    return { k: 'open', label: 'Open', tip: 'Open' };
+  }
+  function opHTML() {
+    const s = opState(); const can = S.src.demo;
+    return '<span class="opwrap"><button class="op ' + s.k + '" data-act="' + (can ? 'opmenu' : 'optip') + '" title="' + esc(s.tip) + '" aria-label="Status: ' + esc(s.label) + (can ? '. Tap to pause or resume' : '. Set on the KDS phone') + '">' + esc(s.label) + (can ? ' ▾' : '') + '</button>' +
+      (S.opMenu ? '<div class="opmenu" role="menu">' + (s.k === 'paused' ? '<button data-act="oppause" data-arg="0">Resume</button>' : '<button data-act="oppause" data-arg="15">Pause 15 minutes</button><button data-act="oppause" data-arg="30">Pause 30 minutes</button><button data-act="oppause" data-arg="60">Pause 60 minutes</button><button data-act="oppause" data-arg="today">Pause for today</button>') + '<div class="opnote">Pausing here does not pause your stores in the delivery apps.</div></div>' : '') + '</span>';
+  }
   function topHTML() {
     const d = S.data; const ringing = unacked().length > 0;
     return '<div class="top"><button class="icon-btn" data-act="menu" aria-label="Menu">' + icon('menu') + '</button>' +
-      '<h1>' + (S.view === 'history' ? 'History' : 'Kitchen') + (S.src.demo ? '<span class="badge demo-badge">DEMO</span>' : '<span class="badge ' + (S.connErr ? 'bad' : 'ok') + '">' + (S.connErr ? 'Offline' : 'Live') + '</span>') + '</h1>' +
-      '<button class="icon-btn" data-act="sound" aria-label="' + (S.sound ? 'Mute sound' : 'Turn sound on') + '" aria-pressed="' + S.sound + '">' + icon(S.sound ? 'vol' : 'mute') + '</button>' +
+      '<h1><span class="ttl">' + (S.view === 'history' ? 'History' : 'Kitchen') + '</span>' + (S.src.demo ? '<span class="badge demo-badge">DEMO</span>' : '<span class="badge ' + (S.connErr ? 'bad' : 'ok') + '">' + (S.connErr ? 'Offline' : 'Live') + '</span>') + '</h1>' +
+      opHTML() + '<button class="icon-btn" data-act="search" aria-label="' + (S.searchOpen ? 'Close search' : 'Search orders') + '">' + icon(S.searchOpen ? 'close' : 'search') + '</button>' +
+      '<button class="icon-btn" data-act="theme" aria-label="Switch dark / light">' + icon('theme') + '</button>' +
+      '<button class="icon-btn" data-act="sound" aria-label=""' + (S.sound ? 'Mute sound' : 'Turn sound on') + '" aria-pressed="' + S.sound + '">' + icon(S.sound ? 'vol' : 'mute') + '</button>' +
       '<button class="icon-btn" data-act="refreshAll" aria-label="Refresh the order phones">' + icon('refresh') + '</button></div>';
   }
 
@@ -449,10 +472,11 @@
     applyLook();
     if (S.overlay) { setHTML(app, 'app', '<div class="shell">' + overlayHTML() + '</div>'); return; }
     if (!S.data) { setHTML(app, 'app', '<div class="shell"><div class="empty">Loading…</div></div>'); return; }
-    const shell = '<div class="shell"><div id="s-marq"></div><div id="s-conn"></div><div id="s-top"></div><div class="pills" id="s-pills"></div><div id="s-alarm"></div><div class="chips" id="s-filter"></div><div class="body" id="s-body"></div></div><div id="s-drawer"></div>';
+    const shell = '<div class="shell"><div id="s-marq"></div><div id="s-conn"></div><div id="s-top"></div><div id="s-search"></div><div class="pills" id="s-pills"></div><div id="s-alarm"></div><div class="chips" id="s-filter"></div><div class="body" id="s-body"></div></div><div id="s-drawer"></div>';
     if (!$('#s-body')) { cache.app = shell; app.innerHTML = shell; Object.keys(cache).forEach((k) => { if (k !== 'app') delete cache[k]; }); }
     setHTML($('#s-top'), 'top', topHTML());
     setHTML($('#s-conn'), 'conn', (S.connErr ? '<div class="conn" role="status"><span>' + esc(S.connErr) + '</span></div>' : '') + (S.sound && !S.ready ? '<div class="conn info"><span>Tap anywhere to turn the alarm sound on</span></div>' : ''));
+    setHTML($('#s-search'), 'search', S.searchOpen ? '<div class="search"><input id="q" type="search" inputmode="search" autocomplete="off" placeholder="Order no., customer, item, store, driver" value="' + esc(S.query) + '"></div>' : '');
     setHTML($('#s-pills'), 'pills', pillsHTML());
     setHTML($('#s-marq'), 'marq', marqueeHTML());
     setHTML($('#s-alarm'), 'alarm', alarmHTML());
@@ -594,6 +618,10 @@
       case 'tab': S.tab = Number(arg); return render();
       case 'histrange': S.hist.range = arg; if (arg === 'custom' && !S.hist.from) { const d = new Date(); S.hist.from = S.hist.to = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); } return render();
       case 'menu': S.menu = true; return render();
+      case 'search': S.searchOpen = !S.searchOpen; if (!S.searchOpen) S.query = ''; render(); if (S.searchOpen) { const q = $('#q'); if (q) q.focus(); } return;
+      case 'opmenu': S.opMenu = !S.opMenu; return render();
+      case 'optip': return toast(opState().tip + '. The KDS phone sets the open hours and pauses.');
+      case 'oppause': { const m = arg === 'today' ? ((() => { const d = new Date(); d.setHours(24, 0, 0, 0); return (d.getTime() - now()) / 60000; })()) : Number(arg); S.pauseUntil = m > 0 ? now() + m * 60000 : 0; S.opMenu = false; return render(); }
       case 'closemenu': S.menu = false; return render();
       case 'view': S.view = arg; S.menu = false; return render();
       case 'sound': S.sound = !S.sound; LS.set('sound', S.sound ? '1' : '0'); if (S.sound) { unlockAudio(); setTimeout(() => { S.chime.currentTime = 0; S.chime.play().catch(() => {}); }, 120); } else if (S.alarm) { S.alarm.pause(); S.alarm.currentTime = 0; } S.menu = false; return render();
@@ -617,7 +645,7 @@
       case 'retry': S.overlay = null; return connect();
     }
   });
-  document.addEventListener('input', (e) => { if (e.target.id === 'vol') { LS.set('vol', e.target.value); if (S.alarm) { S.alarm.volume = vol(); S.chime.volume = vol(); } } });
+  document.addEventListener('input', (e) => { if (e.target.id === 'q') { S.query = e.target.value; delete cache.body; delete cache.filter; render(); const q = $('#q'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } return; } if (e.target.id === 'vol') { LS.set('vol', e.target.value); if (S.alarm) { S.alarm.volume = vol(); S.chime.volume = vol(); } } });
   document.addEventListener('change', (e) => {
     if (e.target.id === 'hfrom') { S.hist.from = e.target.value; if (!S.hist.to || S.hist.to < S.hist.from) S.hist.to = S.hist.from; render(); }
     if (e.target.id === 'hto') { S.hist.to = e.target.value; render(); }
