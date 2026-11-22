@@ -219,7 +219,7 @@
     const blink = (state === 'OFFLINE' || state === 'WARNING') && policyOpen();
     const lk = blink ? icon(state === 'OFFLINE' ? 'linkoff' : 'link', 'lk warn blink') : state === 'ONLINE' ? icon('link', 'lk') : state === 'OFFLINE' ? icon('linkoff', 'lk off') : state === 'WARNING' ? icon('link', 'lk warn') : icon('link', 'lk unk');
     const plat = PLAT[p];
-    return '<button class="pill' + (tap ? ' tap' : '') + '" data-act="refreshStore" data-arg="' + esc(key) + '" aria-label="' + esc(full + ' ' + word + (tap ? ', tap to refresh' : '')) + '">' +
+    return '<button class="pill' + (tap ? ' tap' : '') + '" data-act="refreshStore" data-arg="' + esc(key) + '" title="' + esc(full + ' is ' + word + (tap ? ' (touch to refresh)' : '')) + '" aria-label="' + esc(full + ' ' + word + (tap ? ', tap to refresh' : '')) + '">' +
       '<span class="pi" style="background:' + hex6(plat.color) + '">' + plat.mark + '</span>' + (chip ? '<span>' + esc(chip) + '</span>' : '') + lk +
       (stat ? '<span class="age" data-kind="pillage" data-at="' + stat.at + '"></span>' : '') + '</button>';
   }
@@ -452,7 +452,7 @@
     const shell = '<div class="shell"><div id="s-top"></div><div id="s-conn"></div><div class="pills" id="s-pills"></div><div id="s-marq"></div><div id="s-alarm"></div><div class="chips" id="s-filter"></div><div class="body" id="s-body"></div></div><div id="s-drawer"></div>';
     if (!$('#s-body')) { cache.app = shell; app.innerHTML = shell; Object.keys(cache).forEach((k) => { if (k !== 'app') delete cache[k]; }); }
     setHTML($('#s-top'), 'top', topHTML());
-    setHTML($('#s-conn'), 'conn', (S.connErr ? '<div class="conn">' + esc(S.connErr) + '</div>' : '') + (S.sound && !S.ready ? '<div class="conn" style="background:#6a1b9a">Tap anywhere to turn the alarm sound on</div>' : ''));
+    setHTML($('#s-conn'), 'conn', (S.connErr ? '<div class="conn" role="status"><span>' + esc(S.connErr) + '</span></div>' : '') + (S.sound && !S.ready ? '<div class="conn info"><span>Tap anywhere to turn the alarm sound on</span></div>' : ''));
     setHTML($('#s-pills'), 'pills', pillsHTML());
     setHTML($('#s-marq'), 'marq', marqueeHTML());
     setHTML($('#s-alarm'), 'alarm', alarmHTML());

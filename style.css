@@ -22,8 +22,9 @@ svg.i { width: 22px; height: 22px; fill: currentColor; flex: none; }
 
 /* ---------- shell ---------- */
 .shell { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left); }
-.top { display: flex; align-items: center; gap: 6px; padding: 8px 8px 0 4px; }
-.top h1 { font-size: 24px; margin: 0; flex: 1; display: flex; align-items: center; gap: 10px; }
+.shell { width: 100%; max-width: 2200px; margin-left: auto; margin-right: auto; }
+.top { display: flex; align-items: center; gap: 4px; padding: 2px 8px 2px 4px; position: sticky; top: 0; z-index: 6; background: var(--bg); }
+.top h1 { font-size: 20px; margin: 0; flex: 1; display: flex; align-items: center; gap: 10px; }
 .icon-btn { min-width: 48px; min-height: 48px; border: 0; background: transparent; border-radius: 24px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 10px; position: relative; }
 .icon-btn:hover { background: var(--chip); }
 .badge { font-size: 12px; font-weight: 700; color: #fff; border-radius: 6px; padding: 3px 8px; }
@@ -142,7 +143,10 @@ html[data-theme="light"] .attn { background: #ffe0b2; }
 .err { color: var(--danger); font-size: 14px; min-height: 20px; margin: 4px 0; }
 .stack { display: grid; gap: 10px; margin-top: 8px; }
 .demo-note { font-size: 12px; color: var(--muted); text-align: center; padding: 6px 12px 16px; }
-.conn { background: #c62828; color: #fff; text-align: center; font-weight: 700; padding: 6px; font-size: 14px; }
+.conn { background: #f5b301; color: #1a1a1a; font-weight: 700; padding: 4px 0; font-size: 13px; overflow: hidden; white-space: nowrap; }
+.conn span { display: inline-block; padding-left: 100%; animation: mq 18s linear infinite; }
+.conn.info { background: #6a1b9a; color: #fff; }
+@media (prefers-reduced-motion: reduce) { .conn span { padding-left: 10px; animation: none; } }
 .demo-badge { background: #6a1b9a; }
 #toast { position: fixed; left: 50%; bottom: calc(24px + var(--safe-bottom)); transform: translateX(-50%) translateY(20px); background: #263238; color: #fff; padding: 10px 18px; border-radius: 22px; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; z-index: 50; font-weight: 600; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -159,3 +163,13 @@ html[data-theme="light"] .attn { background: #ffe0b2; }
 @media (prefers-reduced-motion: reduce) { .lk.blink, .marq span { animation: none; } .marq span { padding-left: 10px; } }
 .marq .mq-store { padding: 1px 7px; border-radius: 6px; } .marq .mq-bad { color: #9b0000; font-weight: 800; }
 .opt { margin: 1px 0 0 34px; opacity: .72; font-size: .92em; }
+
+/* ---------- small screens: the status pills stay on ONE line you can swipe, and drop their age text (touch a pill for the details) ---------- */
+@media (max-width: 600px) {
+  .pills { flex-wrap: nowrap; overflow-x: auto; padding: 2px 12px 0; scrollbar-width: none; }
+  .pills::-webkit-scrollbar { display: none; }
+  .pill { flex: none; min-height: 40px; } .pill.tap { min-height: 44px; }
+  .pill .age { display: none; }
+  .alarm .t1 { font-size: 18px; } .btn { min-height: 48px; font-size: 16px; padding: 0 16px; }
+}
+@media (min-width: 1100px) { .pills { padding-left: 20px; } .top { padding-left: 12px; padding-right: 16px; } }
