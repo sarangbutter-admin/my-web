@@ -115,7 +115,7 @@
       printCount: 0, createdAt: t0, updatedAt: t0,
     }, o);
     const sc = (id) => stores.find((s) => s.id === id);
-    const items = (list) => list.map((x) => ({ qty: x[0], name: x[1], note: x[2] || '' }));
+    const items = (list) => list.map((x) => ({ qty: x[0], name: x[1], note: x[2] || '', opts: x[3] || '' }));
     const base = (id, store, no, who, ageMin, its, extra) => mk(Object.assign({
       id, platform: sc(store).platform, orderNo: no, customerName: who, items: items(its), itemCount: its.reduce((n, x) => n + (x[0] || 1), 0),
       storeId: store, storeName: sc(store).name, storeShort: sc(store).chip, storeColor: sc(store).color,
@@ -300,15 +300,17 @@
       return '<div class="hold"><div class="bar"><span class="grow">HOLD: don\'t prepare yet</span><span class="mono" data-kind="hold" data-since="' + since + '"></span></div>' +
         '<div class="why">Waiting for the platform\'s instruction. The label prints when it says to prepare.</div></div>';
     }
-    if (o.prepMinutes <= 0) return col === 'ACCEPTED' ? '<div class="sub" style="margin-top:6px;font-size:13px">Prep time not read from the merchant app yet</div>' : '';
-    if (col === 'NEW') return '<div class="sub" style="margin-top:6px">Prep time ' + o.prepMinutes + ' min</div>';
+    if (o.prepMinutes <= 0 && !(o.deadline > 0)) return col === 'ACCEPTED' ? '<div class="sub" style="margin-top:6px;font-size:13px">Prep time not read from the merchant app yet</div>' : '';
+    if (col === 'NEW' && o.prepMinutes > 0) return '<div class="sub" style="margin-top:6px">Prep time ' + o.prepMinutes + ' min</div>';
     const start = o.prepFrom > 0 ? o.prepFrom : o.acceptedAt > 0 ? o.acceptedAt : o.createdAt;
-    return '<div><span class="prep mono" data-kind="prep" data-due="' + (start + o.prepMinutes * 60000) + '"></span><span class="prepof">of ' + o.prepMinutes + ' min</span></div>';
+    const due = o.deadline > 0 ? o.deadline : start + o.prepMinutes * 60000; // the merchant app's own clock when it was read
+    return '<div><span class="prep mono" data-kind="prep" data-due="' + due + '"></span>' + (o.prepMinutes > 0 ? '<span class="prepof">of ' + o.prepMinutes + ' min</span>' : '') + '</div>';
   }
 
   function ticketHTML(o, col) {
     const l = look(o);
     const items = (o.items || []).map((it) => '<div><div class="item"><span class="q">' + (it.qty > 0 ? it.qty + '×' : '•') + '</span><span>' + esc(it.name) + '</span></div>' +
+      (it.opts ? it.opts.split('\n').map((l) => '<div class="opt">' + esc(l) + '</div>').join('') : '') +
       (it.note ? '<div class="note">Note: ' + esc(it.note) + '</div>' : '') + '</div>').join('');
     const chips = [];
     if (!col && o.driverStatus === 'ARRIVED') chips.push('<span class="badge ok">Driver arrived</span>');

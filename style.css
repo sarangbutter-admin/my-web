@@ -158,3 +158,4 @@ html[data-theme="light"] .attn { background: #ffe0b2; }
 @keyframes mq { from { transform: translateX(0); } to { transform: translateX(-100%); } }
 @media (prefers-reduced-motion: reduce) { .lk.blink, .marq span { animation: none; } .marq span { padding-left: 10px; } }
 .marq .mq-store { padding: 1px 7px; border-radius: 6px; } .marq .mq-bad { color: #9b0000; font-weight: 800; }
+.opt { margin: 1px 0 0 34px; opacity: .72; font-size: .92em; }
