@@ -299,8 +299,8 @@
     if (col !== 'NEW' && col !== 'ACCEPTED') return '';
     if (o.stage === 'HOLD') {
       const since = o.stageAt > 0 ? o.stageAt : o.createdAt;
-      return '<div class="hold"><div class="bar"><span class="grow">HOLD: don\'t prepare yet</span><span class="mono" data-kind="hold" data-since="' + since + '"></span></div>' +
-        '<div class="why">Waiting for the platform\'s instruction. The label prints when it says to prepare.</div></div>';
+      return '<div class="hold"><div class="bar"><span class="tag">HOLD</span><span class="grow"> don\'t prepare yet</span><span class="mono" data-kind="hold" data-since="' + since + '"></span></div>' +
+        '<div class="why">Waiting for the platform\'s instruction. It becomes a normal order when it says to prepare; the label prints then.</div></div>';
     }
     if (o.prepMinutes <= 0 && !(o.deadline > 0)) return col === 'ACCEPTED' ? '<div class="sub" style="margin-top:6px;font-size:13px">Prep time not read from the merchant app yet</div>' : '';
     if (col === 'NEW' && o.prepMinutes > 0) return '<div class="sub" style="margin-top:6px">Prep time ' + o.prepMinutes + ' min</div>';
@@ -322,11 +322,13 @@
     if (o.status === 'OUT_FOR_DELIVERY') chips.push('<span class="badge blue">Out for delivery</span>');
     if (!col) chips.push('<span class="badge grey">' + esc({ READY: 'Ready', OUT_FOR_DELIVERY: 'Out for delivery', DELIVERED: 'Delivered', CANCELLED: 'Cancelled' }[o.status] || o.status) + '</span>');
     let main = '';
-    if (col === 'NEW') main = '<button class="btn accept block" data-act="accept" data-id="' + esc(o.id) + '">ACCEPT</button>';
+    const hold = o.stage === 'HOLD' && (col === 'NEW' || col === 'ACCEPTED');
+    if (hold && col === 'NEW') main = '<button class="btn holdbtn block" disabled>HOLD</button><button class="textbtn block" style="width:100%" data-act="accept" data-id="' + esc(o.id) + '">Accept anyway</button>';
+    else if (col === 'NEW') main = '<button class="btn accept block" data-act="accept" data-id="' + esc(o.id) + '">ACCEPT</button>';
     else if (col === 'ACCEPTED') main = '<button class="btn ready block" data-act="ready" data-id="' + esc(o.id) + '">READY</button>';
     else if (col === 'READY') main = '<div class="actions two"><button class="btn line" data-act="undo" data-id="' + esc(o.id) + '">Undo</button><button class="btn done" data-act="done" data-id="' + esc(o.id) + '">DONE</button></div>';
     else main = '<button class="btn line block" style="min-height:52px;font-size:16px" data-act="undo" data-id="' + esc(o.id) + '">Undo</button>';
-    return '<article class="ticket' + (col === 'NEW' ? ' new' : '') + '" style="--sc:' + l.color + '" data-id="' + esc(o.id) + '">' +
+    return '<article class="ticket' + (col === 'NEW' ? ' new' : '') + (hold ? ' onhold' : '') + '" style="--sc:' + l.color + '" data-id="' + esc(o.id) + '">' +
       '<div class="tband" style="background:' + l.color + ';color:' + onColor(l.color) + '"><span class="ttl">' + esc(l.title) + '</span>' + (o.sourceName ? '<span class="src">' + esc(o.sourceName) + '</span>' : '') + '</div>' +
       '<div class="tbody"><div class="row"><div class="no">#' + esc(o.orderNo || '-') + '</div><div class="age mono" data-kind="age" data-since="' + o.createdAt + '" data-work="' + (col === 'NEW' || col === 'ACCEPTED' ? 1 : 0) + '"></div></div>' +
       '<div class="sub">' + esc(o.customerName || 'Customer') + ' · ' + o.itemCount + ' items</div>' +

@@ -198,3 +198,11 @@ html[data-theme="light"] .attn { background: #ffe0b2; }
 .search { padding: 2px 12px 4px; } .search input { width: 100%; min-height: 40px; border-radius: 20px; border: 1px solid var(--line); background: var(--surface); color: var(--text); padding: 0 14px; font: inherit; font-size: 15px; }
 .top h1 { min-width: 0; overflow: hidden; }
 @media (max-width: 520px) { .top h1 .ttl { display: none; } .top .icon-btn { min-width: 42px; padding: 0 6px; } }
+
+/* ---------- GoFood on HOLD: a yellow card, black text, a red HOLD tag, an inactive HOLD button ---------- */
+.ticket.onhold { background: #ffe066; color: #111; border-color: #8a6d00; }
+.ticket.onhold .sub, .ticket.onhold .why, .ticket.onhold .age, .ticket.onhold .opt, .ticket.onhold .pinrow, .ticket.onhold .noitems { color: #3b3b3b; }
+.ticket.onhold .textbtn { color: #111; } .ticket.onhold .textbtn.danger { color: #8f1d1d; }
+.hold .bar { background: transparent; color: #111; padding: 0; } .hold .bar .tag { color: #c62828; font-weight: 900; font-size: 22px; letter-spacing: .5px; }
+.hold .why { color: #3b3b3b; }
+.btn.holdbtn[disabled] { background: #f2c200; color: #111; opacity: 1; font-weight: 900; cursor: not-allowed; }
