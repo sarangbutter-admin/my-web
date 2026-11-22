@@ -143,8 +143,8 @@ html[data-theme="light"] .attn { background: #ffe0b2; }
 .err { color: var(--danger); font-size: 14px; min-height: 20px; margin: 4px 0; }
 .stack { display: grid; gap: 10px; margin-top: 8px; }
 .demo-note { font-size: 12px; color: var(--muted); text-align: center; padding: 6px 12px 16px; }
-.conn { background: #f5b301; color: #1a1a1a; font-weight: 700; padding: 4px 0; font-size: 13px; overflow: hidden; white-space: nowrap; }
-.conn span { display: inline-block; padding-left: 100%; animation: mq 18s linear infinite; }
+.conn { background: #f5b301; color: #1a1a1a; font-weight: 700; padding: 3px 0; font-size: 12px; overflow: hidden; white-space: nowrap; }
+.conn span { display: inline-block; padding-left: 100%; animation: mq 40s linear infinite; }
 .conn.info { background: #6a1b9a; color: #fff; }
 @media (prefers-reduced-motion: reduce) { .conn span { padding-left: 10px; animation: none; } }
 .demo-badge { background: #6a1b9a; }
@@ -156,9 +156,9 @@ html[data-theme="light"] .attn { background: #ffe0b2; }
 
 .lk.blink { animation: lkblink 1.8s ease-in-out infinite alternate; }
 @keyframes lkblink { from { opacity: 1; } to { opacity: .25; } }
-.marq { overflow: hidden; white-space: nowrap; margin: 6px 0 0; border-radius: 8px; background: #f5b301; color: #1a1a1a; font-weight: 600; font-size: 14px; padding: 6px 0; }
+.marq { overflow: hidden; white-space: nowrap; margin: 0; background: #f5b301; color: #1a1a1a; font-weight: 600; font-size: 12px; padding: 3px 0; }
 .marq.calm { background: rgba(128,128,128,.18); color: inherit; }
-.marq span { display: inline-block; padding-left: 100%; animation: mq 20s linear infinite; }
+.marq span { display: inline-block; padding-left: 100%; animation: mq 40s linear infinite; }
 @keyframes mq { from { transform: translateX(0); } to { transform: translateX(-100%); } }
 @media (prefers-reduced-motion: reduce) { .lk.blink, .marq span { animation: none; } .marq span { padding-left: 10px; } }
 .marq .mq-store { padding: 1px 7px; border-radius: 6px; } .marq .mq-bad { color: #9b0000; font-weight: 800; }
@@ -173,3 +173,15 @@ html[data-theme="light"] .attn { background: #ffe0b2; }
   .alarm .t1 { font-size: 18px; } .btn { min-height: 48px; font-size: 16px; padding: 0 16px; }
 }
 @media (min-width: 1100px) { .pills { padding-left: 20px; } .top { padding-left: 12px; padding-right: 16px; } }
+
+/* ---------- slimmer controls: small to look at, still easy to touch ---------- */
+.chip { min-height: 34px; padding: 0 12px; font-size: 13px; border-radius: 17px; position: relative; }
+.chip::after, .pill::after, .textbtn.small::after { content: ""; position: absolute; inset: -6px 0; }
+.pill { position: relative; min-height: 28px; padding: 2px 8px 2px 3px; font-size: 12px; gap: 4px; }
+.pill.tap { min-height: 30px; }
+.pi { width: 18px; height: 18px; font-size: 10px; } .pill svg.i { width: 16px; height: 16px; }
+.pills { gap: 4px; padding-top: 2px; }
+.hist input[type=date] { min-height: 36px; font-size: 14px; }
+.hist .bar .btn, .hist .bar .textbtn, .hist .btn.small { min-height: 34px; font-size: 13px; padding: 0 12px; }
+.btn.small { min-height: 38px; font-size: 14px; padding: 0 14px; }
+.tab { min-height: 42px; font-size: 15px; }

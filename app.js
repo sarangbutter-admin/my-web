@@ -449,7 +449,7 @@
     applyLook();
     if (S.overlay) { setHTML(app, 'app', '<div class="shell">' + overlayHTML() + '</div>'); return; }
     if (!S.data) { setHTML(app, 'app', '<div class="shell"><div class="empty">Loading…</div></div>'); return; }
-    const shell = '<div class="shell"><div id="s-top"></div><div id="s-conn"></div><div class="pills" id="s-pills"></div><div id="s-marq"></div><div id="s-alarm"></div><div class="chips" id="s-filter"></div><div class="body" id="s-body"></div></div><div id="s-drawer"></div>';
+    const shell = '<div class="shell"><div id="s-marq"></div><div id="s-conn"></div><div id="s-top"></div><div class="pills" id="s-pills"></div><div id="s-alarm"></div><div class="chips" id="s-filter"></div><div class="body" id="s-body"></div></div><div id="s-drawer"></div>';
     if (!$('#s-body')) { cache.app = shell; app.innerHTML = shell; Object.keys(cache).forEach((k) => { if (k !== 'app') delete cache[k]; }); }
     setHTML($('#s-top'), 'top', topHTML());
     setHTML($('#s-conn'), 'conn', (S.connErr ? '<div class="conn" role="status"><span>' + esc(S.connErr) + '</span></div>' : '') + (S.sound && !S.ready ? '<div class="conn info"><span>Tap anywhere to turn the alarm sound on</span></div>' : ''));
