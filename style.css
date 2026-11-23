@@ -215,3 +215,13 @@ html[data-theme="light"] .attn { background: #ffe0b2; }
 .perr { margin-top: 8px; font-size: 13px; color: var(--danger); } .perr .m { margin-top: 4px; }
 .ydet { margin-left: 8px; min-height: 28px; padding: 0 12px; border: 0; border-radius: 14px; background: #ffd54f; color: #111; font-weight: 800; font-size: 12px; position: relative; }
 .ydet::after { content: ""; position: absolute; inset: -10px -4px; }
+
+/* ---------- cancelled order: a red card that pulses until GOT IT; the top line turns red too ---------- */
+.ticket.cancelled { background: #b71c1c; color: #fff; border-color: #ff8a80; animation: cxl 1.4s ease-in-out infinite alternate; }
+.ticket.cancelled .sub, .ticket.cancelled .age, .ticket.cancelled .opt, .ticket.cancelled .textbtn { color: #ffe0e0; }
+@keyframes cxl { from { background: #b71c1c; } to { background: #7f0000; } }
+.cxl { margin-top: 8px; } .cxl b { font-size: 24px; font-weight: 900; display: block; } .cxl .m { color: #ffe0e0; font-size: 13px; margin-top: 2px; }
+.btn.gotit { background: #fff; color: #b71c1c; }
+.marq.ticker { background: #1a1a1a; color: #fff; } .marq.ticker.alarm { animation: tick 1.6s ease-in-out infinite alternate; }
+@keyframes tick { from { background: #1a1a1a; } to { background: #8e0000; } }
+@media (prefers-reduced-motion: reduce) { .ticket.cancelled, .marq.ticker.alarm { animation: none; } }

@@ -161,6 +161,8 @@
         else if (action === 'done' && o) Object.assign(o, { status: 'DELIVERED', updatedAt: now });
         else if (action === 'undo' && o) Object.assign(o, { status: 'ACCEPTED', updatedAt: now });
         else if (action === 'dismiss' && o) o.attention = '';
+        else if (action === 'gotit' && o) o.cancelOpen = false;
+        else if (action === 'startpin' && o) o.pinWait = false;
         else if (action === 'delete') orders = orders.filter((x) => x.id !== id);
         else if (action === 'deleteMany') { const ids = (arg || '').split(','); orders = orders.filter((x) => ids.indexOf(x.id) < 0); }
         else if (action === 'addTest') {
@@ -182,6 +184,7 @@
     return { name, color: hex6(color), title: p.label.toUpperCase() + (name ? ' · ' + name : '') };
   }
   function colOf(o, now) {
+    if (o.status === 'CANCELLED' && o.cancelOpen) return 'NEW'; // stays on the board, red, until GOT IT
     if (o.status === 'CANCELLED' || o.status === 'DELIVERED') return null;
     if (o.status === 'READY' || o.status === 'OUT_FOR_DELIVERY') return now - o.updatedAt < 2 * 3600000 ? 'READY' : null;
     return o.acknowledged ? 'ACCEPTED' : 'NEW';
@@ -227,9 +230,35 @@
   }
   function policyOpen() { const p = S.data && S.data.policy; return !p || p.open !== false; }
   /** Running text: stores that are closed / paused (or need a check-in) during open hours; a calm line outside them. */
+  /** The order items of the top line, grouped, most urgent first (same rules as the app). */
+  function tickerItems() {
+    const d = S.data, sw = ((d.settings || {}).ticker) || {}, on = (k) => sw[k] !== false, t = now();
+    const hold = !!(d.settings || {}).gofoodHold;
+    const live = d.orders.filter((o) => !isHistory(o)), nos = (l) => l.slice(0, 3).map((o) => '#' + (o.orderNo || '-')).join(', ') + (l.length > 3 ? ' +' + (l.length - 3) : '');
+    const out = [];
+    if (on('cancelled')) d.orders.filter((o) => o.cancelOpen).forEach((o) => out.push(['#d32f2f', '#' + (o.orderNo || '-') + ' CANCELLED' + (o.cancelReason ? ': ' + o.cancelReason : '') + ' · check the app']));
+    const att = live.filter((o) => o.attention); if (on('attention') && att.length) out.push(['#f5b301', att.length === 1 ? '#' + (att[0].orderNo || '-') + ' needs attention: ' + att[0].attention : att.length + ' orders need attention: ' + nos(att)]);
+    const nw = live.filter((o) => !o.acknowledged); if (on('new') && nw.length) out.push(['#ef6c00', nw.length === 1 ? 'New order #' + (nw[0].orderNo || '-') : nw.length + ' new orders: ' + nos(nw)]);
+    const arr = live.filter((o) => (o.stage === 'ARRIVED' || o.driverStatus === 'ARRIVED') && (o.status === 'NEW' || o.status === 'ACCEPTED')); if (on('arrived') && arr.length) out.push(['#2e7d32', 'Driver arrived: ' + nos(arr)]);
+    const hd = live.filter((o) => o.stage === 'HOLD'); if (on('hold') && hd.length) out.push(['#546e7a', 'Waiting for instruction (GoFood): ' + nos(hd)]);
+    const ph = live.filter((o) => hold && o.platform === 'gofood' && o.pinWait && !o.pin && o.stage !== 'HOLD'); if (on('hold') && ph.length) out.push(['#546e7a', 'Waiting for the driver\'s PIN: ' + nos(ph)]);
+    const ofd = d.orders.filter((o) => o.status === 'OUT_FOR_DELIVERY'); if (on('out') && ofd.length) out.push(['#1565c0', 'Out for delivery: ' + nos(ofd)]);
+    const dl = d.orders.filter((o) => o.status === 'DELIVERED' && o.deliveryConfirmed && t - o.updatedAt < 30000); if (on('delivered') && dl.length) out.push(['#00838f', 'Delivered: ' + nos(dl)]);
+    return out;
+  }
+
   function marqueeHTML() {
     const d = S.data, p = d.policy || {}, st = (d.status && d.status.stores) || {};
     let text, html = '', cls = 'marq';
+    const ti = policyOpen() ? tickerItems() : [];
+    if (ti.length) {
+      const speed = Math.min(200, Math.max(10, +p.speed || 40));
+      const txt = ti.map((i) => i[1]).join(' • ');
+      const dur = Math.round((txt.length * 8 + 700) / speed);
+      const red = ti.some((i) => i[0] === '#d32f2f');
+      return '<div class="marq ticker' + (red ? ' alarm' : '') + '" role="status" aria-label="' + esc(txt) + '"><span style="animation-duration:' + dur + 's">' +
+        ti.map((i) => '<b class="mq-store" style="background:' + i[0] + ';color:' + onColor(i[0]) + '">' + esc(i[1]) + '</b>').join('&nbsp;&nbsp; • &nbsp;&nbsp;') + '</span></div>';
+    }
     if (!policyOpen()) { text = 'Closed now · open ' + (p.hours || '') + ' · no orders are read and no merchant app is visited'; cls += ' calm'; }
     else {
       if (p.marquee === false) return '';
@@ -295,12 +324,13 @@
       '<span class="dtimer mono" data-kind="dtimer"></span></div>';
   }
 
-  function prepHTML(o, col) {
+  function prepHTML(o, col, pinHold) {
     if (col !== 'NEW' && col !== 'ACCEPTED') return '';
-    if (o.stage === 'HOLD') {
-      const since = o.stageAt > 0 ? o.stageAt : o.createdAt;
-      return '<div class="hold"><div class="bar"><span class="tag">HOLD</span><span class="grow"> don\'t prepare yet</span><span class="mono" data-kind="hold" data-since="' + since + '"></span></div>' +
-        '<div class="why">Waiting for the platform\'s instruction. It becomes a normal order when it says to prepare; the label prints then.</div></div>';
+    if (o.stage === 'HOLD' || pinHold) {
+      const since = o.stage === 'HOLD' && o.stageAt > 0 ? o.stageAt : o.createdAt;
+      return '<div class="hold"><div class="bar"><span class="tag">HOLD</span><span class="grow">' + (o.stage === 'HOLD' ? ' don\'t prepare yet' : ' waiting for the driver\'s PIN') + '</span><span class="mono" data-kind="hold" data-since="' + since + '"></span></div>' +
+        '<div class="why">' + (o.stage === 'HOLD' ? 'Waiting for the platform\'s instruction. It becomes a normal order when it says to prepare; the label prints then.'
+          : 'Don\'t cook yet. When GoFood finds a driver, the PIN is read, the label prints and this becomes a normal order.') + '</div></div>';
     }
     if (o.prepMinutes <= 0 && !(o.deadline > 0)) return col === 'ACCEPTED' ? '<div class="sub" style="margin-top:6px;font-size:13px">Prep time not read from the merchant app yet</div>' : '';
     if (col === 'NEW' && o.prepMinutes > 0) return '<div class="sub" style="margin-top:6px">Prep time ' + o.prepMinutes + ' min</div>';
@@ -318,22 +348,28 @@
     if (!col && o.driverStatus === 'ARRIVED') chips.push('<span class="badge ok">Driver arrived</span>');
     if (o.autoAccepted) chips.push('<span class="badge purple">Auto-accepted</span>');
     if (o.selfPickup) chips.push('<span class="badge" style="background:#00838f">Self pickup</span>');
-    if (o.pinWait && !o.pin) chips.push('<span class="badge grey">Reading details…</span>');
+    const settings = (S.data && S.data.settings) || {};
+    const pinHold = !!settings.gofoodHold && o.platform === 'gofood' && o.pinWait && !o.pin;
+    if (o.pinWait && !o.pin && !pinHold) chips.push(o.platform === 'gofood' ? '<span class="badge bad">WAITING PIN</span>' : '<span class="badge grey">Reading details…</span>');
     if (o.status === 'OUT_FOR_DELIVERY') chips.push('<span class="badge blue">Out for delivery</span>');
     if (!col) chips.push('<span class="badge grey">' + esc({ READY: 'Ready', OUT_FOR_DELIVERY: 'Out for delivery', DELIVERED: o.deliveryConfirmed ? 'Delivered' : 'Done', CANCELLED: 'Cancelled' }[o.status] || o.status) + '</span>');
     let main = '';
-    const hold = o.stage === 'HOLD' && (col === 'NEW' || col === 'ACCEPTED');
-    if (hold && col === 'NEW') main = '<button class="btn holdbtn block" disabled>HOLD</button><button class="textbtn block" style="width:100%" data-act="accept" data-id="' + esc(o.id) + '">Accept anyway</button>';
+    const cancelled = o.status === 'CANCELLED' && o.cancelOpen;
+    const hold = !cancelled && (o.stage === 'HOLD' || pinHold) && (col === 'NEW' || col === 'ACCEPTED');
+    if (cancelled) main = '<button class="btn gotit block" data-act="gotit" data-id="' + esc(o.id) + '">GOT IT</button>';
+    else if (hold && col === 'ACCEPTED') main = '<button class="btn holdbtn block" disabled>HOLD</button>' + (pinHold ? '<button class="textbtn block" style="width:100%" data-act="startpin" data-id="' + esc(o.id) + '">Start anyway (no PIN)</button>' : '');
+    else if (hold && col === 'NEW') main = '<button class="btn holdbtn block" disabled>HOLD</button><button class="textbtn block" style="width:100%" data-act="accept" data-id="' + esc(o.id) + '">Accept anyway</button>';
     else if (col === 'NEW') main = '<button class="btn accept block" data-act="accept" data-id="' + esc(o.id) + '">ACCEPT</button>';
     else if (col === 'ACCEPTED') main = '<button class="btn ready block" data-act="ready" data-id="' + esc(o.id) + '">READY</button>';
     else if (col === 'READY') main = '<div class="actions two"><button class="btn line" data-act="undo" data-id="' + esc(o.id) + '">Undo</button><button class="btn done" data-act="done" data-id="' + esc(o.id) + '">DONE</button></div>';
     else main = '<button class="btn line block" style="min-height:52px;font-size:16px" data-act="undo" data-id="' + esc(o.id) + '">Undo</button>';
-    return '<article class="ticket' + (col === 'NEW' ? ' new' : '') + (hold ? ' onhold' : '') + '" style="--sc:' + l.color + '" data-id="' + esc(o.id) + '">' +
+    return '<article class="ticket' + (col === 'NEW' ? ' new' : '') + (hold ? ' onhold' : '') + (cancelled ? ' cancelled' : '') + '" style="--sc:' + l.color + '" data-id="' + esc(o.id) + '">' +
       '<div class="tband" style="background:' + l.color + ';color:' + onColor(l.color) + '"><span class="ttl">' + esc(l.title) + '</span>' + (o.sourceName ? '<span class="src">' + esc(o.sourceName) + '</span>' : '') + '</div>' +
       ((o.activity && now() - (o.activityAt || 0) < 90000) ? '<div class="act"><span class="spin"></span>' + esc(o.activity) + '…</div>' : '') +
       '<div class="tbody"><div class="row"><div class="no">#' + esc(o.orderNo || '-') + '</div><div class="age mono" data-kind="age" data-since="' + o.createdAt + '" data-work="' + (col === 'NEW' || col === 'ACCEPTED' ? 1 : 0) + '"></div></div>' +
       '<div class="sub">' + esc(o.customerName || 'Customer') + ' · ' + o.itemCount + ' items</div>' +
-      prepHTML(o, col) + driverHTML(o, col) +
+      (cancelled ? '<div class="cxl"><b>CANCELLED</b>' + (o.cancelReason ? '<div>Why: ' + esc(o.cancelReason) + '</div>' : '') + '<div class="m">Check the ' + esc((PLAT[o.platform] || {}).label || '') + ' app. Stop preparing this order.</div></div>'
+        : prepHTML(o, col, pinHold) + driverHTML(o, col)) +
       (o.pin ? '<div class="pinrow">PIN<span class="pin mono">' + esc(o.pin) + '</span></div>' : '') +
       '<div class="items">' + (items || '<div class="noitems">Items not read yet. Open the order in the merchant app and they will appear.</div>') +
       (o.note ? '<div class="note order">Order note: ' + esc(o.note) + '</div>' : '') + '</div>' +
@@ -357,7 +393,7 @@
     const orders = S.data.orders.filter((o) => (!S.filter || o.storeId === S.filter) && matchQ(o));
     const by = { NEW: [], ACCEPTED: [], READY: [] };
     orders.forEach((o) => { const c = colOf(o, t); if (c) by[c].push(o); });
-    by.NEW.sort((a, b) => a.createdAt - b.createdAt); by.ACCEPTED.sort((a, b) => a.createdAt - b.createdAt); by.READY.sort((a, b) => b.updatedAt - a.updatedAt);
+    by.NEW.sort((a, b) => (b.cancelOpen ? 1 : 0) - (a.cancelOpen ? 1 : 0) || a.createdAt - b.createdAt); by.ACCEPTED.sort((a, b) => a.createdAt - b.createdAt); by.READY.sort((a, b) => b.updatedAt - a.updatedAt);
     const col = (c, label, empty) => '<div class="col">' + (by[c.k].length ? by[c.k].map((o) => ticketHTML(o, c.k)).join('') : '<div class="empty">' + esc(empty) + '</div>') + '</div>';
     if (wide) {
       return '<div class="board wide">' + COLS.map(([k, label, empty]) => {
@@ -616,7 +652,7 @@
       S.armed = { key }; render(); clearTimeout(S.armedH); S.armedH = setTimeout(() => { S.armed = null; render(); }, 3000); return;
     }
     switch (a) {
-      case 'accept': case 'ready': case 'done': case 'undo': case 'dismiss': case 'acceptAll': return act(a, id, arg);
+      case 'accept': case 'ready': case 'done': case 'undo': case 'dismiss': case 'acceptAll': case 'gotit': case 'startpin': return act(a, id, arg);
       case 'print': await act('print', id); return toast('Sent to the KDS printer');
       case 'refreshAll': await act('refresh', '', ''); return toast('Refresh sent to the order phones');
       case 'refreshStore': await act('refresh', '', arg); return toast('Refresh sent');
