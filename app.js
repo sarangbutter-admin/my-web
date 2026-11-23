@@ -161,6 +161,7 @@
         else if (action === 'done' && o) Object.assign(o, { status: 'DELIVERED', updatedAt: now });
         else if (action === 'undo' && o) Object.assign(o, { status: 'ACCEPTED', updatedAt: now });
         else if (action === 'dismiss' && o) o.attention = '';
+        else if (action === 'retry' && o) o.attention = '';
         else if (action === 'gotit' && o) o.cancelOpen = false;
         else if (action === 'startpin' && o) o.pinWait = false;
         else if (action === 'delete') orders = orders.filter((x) => x.id !== id);
@@ -375,7 +376,7 @@
       (o.note ? '<div class="note order">Order note: ' + esc(o.note) + '</div>' : '') + '</div>' +
       (chips.length ? '<div class="chipline">' + chips.join('') + '</div>' : '') +
       (o.lastPrintError ? '<div class="perr"><b>Print failed</b> <button class="ydet" data-act="perr" data-id="' + esc(o.id) + '">' + (S.perr && S.perr[o.id] ? 'hide' : 'details') + '</button>' + (S.perr && S.perr[o.id] ? '<div class="m">' + esc(o.lastPrintError) + '</div>' : '') + '</div>' : '') +
-      (o.attention ? '<div class="attn">' + icon('warn') + '<div class="t"><b>Needs attention</b><span class="m">' + esc(o.attention) + '. Finish it on the order phone.</span></div><button class="textbtn" data-act="dismiss" data-id="' + esc(o.id) + '">Dismiss</button></div>' : '') +
+      (o.attention ? '<div class="attn">' + icon('warn') + '<div class="t"><b>Needs attention</b><span class="m">' + esc(o.attention) + '. Finish it on the order phone.</span></div><button class="textbtn" data-act="retry" data-id="' + esc(o.id) + '">Retry</button><button class="textbtn" data-act="dismiss" data-id="' + esc(o.id) + '">Dismiss</button></div>' : '') +
       '<div class="actions">' + main + '</div>' +
       '<div class="more"><button class="textbtn" data-act="print" data-id="' + esc(o.id) + '">' + (o.printCount > 0 ? 'Reprint' : 'Print') + '</button><span class="grow"></span>' +
       (canDelete() ? armedBtn('delete:' + o.id, 'textbtn danger', 'Delete', 'Tap again to delete', 'data-id="' + esc(o.id) + '" data-do="delete"') : '') + '</div></div></article>';
@@ -652,7 +653,7 @@
       S.armed = { key }; render(); clearTimeout(S.armedH); S.armedH = setTimeout(() => { S.armed = null; render(); }, 3000); return;
     }
     switch (a) {
-      case 'accept': case 'ready': case 'done': case 'undo': case 'dismiss': case 'acceptAll': case 'gotit': case 'startpin': return act(a, id, arg);
+      case 'accept': case 'ready': case 'done': case 'undo': case 'dismiss': case 'acceptAll': case 'gotit': case 'startpin': case 'retry': return act(a, id, arg);
       case 'print': await act('print', id); return toast('Sent to the KDS printer');
       case 'refreshAll': await act('refresh', '', ''); return toast('Refresh sent to the order phones');
       case 'refreshStore': await act('refresh', '', arg); return toast('Refresh sent');
