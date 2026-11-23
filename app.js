@@ -320,7 +320,7 @@
     if (o.selfPickup) chips.push('<span class="badge" style="background:#00838f">Self pickup</span>');
     if (o.pinWait && !o.pin) chips.push('<span class="badge grey">Reading details…</span>');
     if (o.status === 'OUT_FOR_DELIVERY') chips.push('<span class="badge blue">Out for delivery</span>');
-    if (!col) chips.push('<span class="badge grey">' + esc({ READY: 'Ready', OUT_FOR_DELIVERY: 'Out for delivery', DELIVERED: 'Delivered', CANCELLED: 'Cancelled' }[o.status] || o.status) + '</span>');
+    if (!col) chips.push('<span class="badge grey">' + esc({ READY: 'Ready', OUT_FOR_DELIVERY: 'Out for delivery', DELIVERED: o.deliveryConfirmed ? 'Delivered' : 'Done', CANCELLED: 'Cancelled' }[o.status] || o.status) + '</span>');
     let main = '';
     const hold = o.stage === 'HOLD' && (col === 'NEW' || col === 'ACCEPTED');
     if (hold && col === 'NEW') main = '<button class="btn holdbtn block" disabled>HOLD</button><button class="textbtn block" style="width:100%" data-act="accept" data-id="' + esc(o.id) + '">Accept anyway</button>';
