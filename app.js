@@ -370,7 +370,7 @@
       ((o.refreshResult && now() - (o.refreshResultAt || 0) < 30000) ? '<div class="act">' + esc(o.refreshResult) + '</div>' : '') +
       ((o.activity && now() - (o.activityAt || 0) < 90000) ? '<div class="act"><span class="spin"></span>' + esc(o.activity) + '…</div>' : '') +
       '<div class="tbody"><div class="row"><div class="no">#' + esc(o.orderNo || '-') + '</div><div class="age mono" data-kind="age" data-since="' + o.createdAt + '" data-work="' + (col === 'NEW' || col === 'ACCEPTED' ? 1 : 0) + '"></div></div>' +
-      '<div class="sub">' + esc(o.customerName || 'Customer') + ' · ' + o.itemCount + ' items</div>' +
+      '<div class="sub">' + esc(o.customerName || 'Customer') + ' · ' + o.itemCount + ' items' + ((o.itemCount > 0 && (o.items || []).length && (o.items || []).reduce((n, i) => n + Math.max(1, i.qty || 1), 0) < o.itemCount) ? ' (only ' + (o.items || []).reduce((n, i) => n + Math.max(1, i.qty || 1), 0) + ' listed)' : '') + '</div>' +
       (cancelled ? '<div class="cxl"><b>CANCELLED</b>' + (o.cancelReason ? '<div>Why: ' + esc(o.cancelReason) + '</div>' : '') + '<div class="m">Check the ' + esc((PLAT[o.platform] || {}).label || '') + ' app. Stop preparing this order.</div></div>'
         : prepHTML(o, col, pinHold) + driverHTML(o, col)) +
       (o.pin ? '<div class="pinrow">PIN<span class="pin mono">' + esc(o.pin) + '</span></div>' : '') +
