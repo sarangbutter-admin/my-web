@@ -330,6 +330,7 @@
     else main = '<button class="btn line block" style="min-height:52px;font-size:16px" data-act="undo" data-id="' + esc(o.id) + '">Undo</button>';
     return '<article class="ticket' + (col === 'NEW' ? ' new' : '') + (hold ? ' onhold' : '') + '" style="--sc:' + l.color + '" data-id="' + esc(o.id) + '">' +
       '<div class="tband" style="background:' + l.color + ';color:' + onColor(l.color) + '"><span class="ttl">' + esc(l.title) + '</span>' + (o.sourceName ? '<span class="src">' + esc(o.sourceName) + '</span>' : '') + '</div>' +
+      ((o.activity && now() - (o.activityAt || 0) < 90000) ? '<div class="act"><span class="spin"></span>' + esc(o.activity) + '…</div>' : '') +
       '<div class="tbody"><div class="row"><div class="no">#' + esc(o.orderNo || '-') + '</div><div class="age mono" data-kind="age" data-since="' + o.createdAt + '" data-work="' + (col === 'NEW' || col === 'ACCEPTED' ? 1 : 0) + '"></div></div>' +
       '<div class="sub">' + esc(o.customerName || 'Customer') + ' · ' + o.itemCount + ' items</div>' +
       prepHTML(o, col) + driverHTML(o, col) +
@@ -337,6 +338,7 @@
       '<div class="items">' + (items || '<div class="noitems">Items not read yet. Open the order in the merchant app and they will appear.</div>') +
       (o.note ? '<div class="note order">Order note: ' + esc(o.note) + '</div>' : '') + '</div>' +
       (chips.length ? '<div class="chipline">' + chips.join('') + '</div>' : '') +
+      (o.lastPrintError ? '<div class="perr"><b>Print failed</b> <button class="ydet" data-act="perr" data-id="' + esc(o.id) + '">' + (S.perr && S.perr[o.id] ? 'hide' : 'details') + '</button>' + (S.perr && S.perr[o.id] ? '<div class="m">' + esc(o.lastPrintError) + '</div>' : '') + '</div>' : '') +
       (o.attention ? '<div class="attn">' + icon('warn') + '<div class="t"><b>Needs attention</b><span class="m">' + esc(o.attention) + '. Finish it on the order phone.</span></div><button class="textbtn" data-act="dismiss" data-id="' + esc(o.id) + '">Dismiss</button></div>' : '') +
       '<div class="actions">' + main + '</div>' +
       '<div class="more"><button class="textbtn" data-act="print" data-id="' + esc(o.id) + '">' + (o.printCount > 0 ? 'Reprint' : 'Print') + '</button><span class="grow"></span>' +
@@ -622,6 +624,7 @@
       case 'tab': S.tab = Number(arg); return render();
       case 'histrange': S.hist.range = arg; if (arg === 'custom' && !S.hist.from) { const d = new Date(); S.hist.from = S.hist.to = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); } return render();
       case 'menu': S.menu = true; return render();
+      case 'perr': S.perr = S.perr || {}; S.perr[id] = !S.perr[id]; delete cache.body; return render();
       case 'search': S.searchOpen = !S.searchOpen; if (!S.searchOpen) S.query = ''; render(); if (S.searchOpen) { const q = $('#q'); if (q) q.focus(); } return;
       case 'opmenu': S.opMenu = !S.opMenu; return render();
       case 'optip': return toast(opState().tip + '. The KDS phone sets the open hours and pauses.');

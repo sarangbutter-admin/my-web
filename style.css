@@ -206,3 +206,12 @@ html[data-theme="light"] .attn { background: #ffe0b2; }
 .hold .bar { background: transparent; color: #111; padding: 0; } .hold .bar .tag { color: #c62828; font-weight: 900; font-size: 22px; letter-spacing: .5px; }
 .hold .why { color: #3b3b3b; }
 .btn.holdbtn[disabled] { background: #f2c200; color: #111; opacity: 1; font-weight: 900; cursor: not-allowed; }
+
+/* ---------- what the order phone is doing for this ticket, and the print error (hidden behind a yellow "details") ---------- */
+.act { display: flex; align-items: center; gap: 6px; padding: 3px 12px; font-size: 12px; opacity: .9; }
+.act .spin { width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: spin 1s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .act .spin { animation: none; } }
+.perr { margin-top: 8px; font-size: 13px; color: var(--danger); } .perr .m { margin-top: 4px; }
+.ydet { margin-left: 8px; min-height: 28px; padding: 0 12px; border: 0; border-radius: 14px; background: #ffd54f; color: #111; font-weight: 800; font-size: 12px; position: relative; }
+.ydet::after { content: ""; position: absolute; inset: -10px -4px; }
