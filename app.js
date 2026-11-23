@@ -318,7 +318,7 @@
     if (!col && o.driverStatus === 'ARRIVED') chips.push('<span class="badge ok">Driver arrived</span>');
     if (o.autoAccepted) chips.push('<span class="badge purple">Auto-accepted</span>');
     if (o.selfPickup) chips.push('<span class="badge" style="background:#00838f">Self pickup</span>');
-    if (o.pinWait && !o.pin) chips.push('<span class="badge grey">Reading PIN…</span>');
+    if (o.pinWait && !o.pin) chips.push('<span class="badge grey">Reading details…</span>');
     if (o.status === 'OUT_FOR_DELIVERY') chips.push('<span class="badge blue">Out for delivery</span>');
     if (!col) chips.push('<span class="badge grey">' + esc({ READY: 'Ready', OUT_FOR_DELIVERY: 'Out for delivery', DELIVERED: 'Delivered', CANCELLED: 'Cancelled' }[o.status] || o.status) + '</span>');
     let main = '';
