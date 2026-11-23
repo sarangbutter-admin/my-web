@@ -162,6 +162,7 @@
         else if (action === 'undo' && o) Object.assign(o, { status: 'ACCEPTED', updatedAt: now });
         else if (action === 'dismiss' && o) o.attention = '';
         else if (action === 'retry' && o) o.attention = '';
+        else if (action === 'refreshOrder' && o) { o.refreshCount = (o.refreshCount || 0) + 1; o.activity = 'Refresh requested'; o.activityAt = now; setTimeout(() => { o.activity = ''; o.refreshResult = 'Refreshed ' + new Date().toTimeString().slice(0, 5) + ': no change'; o.refreshResultAt = Date.now(); }, 1500); }
         else if (action === 'gotit' && o) o.cancelOpen = false;
         else if (action === 'startpin' && o) o.pinWait = false;
         else if (action === 'delete') orders = orders.filter((x) => x.id !== id);
@@ -365,7 +366,8 @@
     else if (col === 'READY') main = '<div class="actions two"><button class="btn line" data-act="undo" data-id="' + esc(o.id) + '">Undo</button><button class="btn done" data-act="done" data-id="' + esc(o.id) + '">DONE</button></div>';
     else main = '<button class="btn line block" style="min-height:52px;font-size:16px" data-act="undo" data-id="' + esc(o.id) + '">Undo</button>';
     return '<article class="ticket' + (col === 'NEW' ? ' new' : '') + (hold ? ' onhold' : '') + (cancelled ? ' cancelled' : '') + '" style="--sc:' + l.color + '" data-id="' + esc(o.id) + '">' +
-      '<div class="tband" style="background:' + l.color + ';color:' + onColor(l.color) + '"><span class="ttl">' + esc(l.title) + '</span>' + (o.sourceName ? '<span class="src">' + esc(o.sourceName) + '</span>' : '') + '</div>' +
+      '<div class="tband" style="background:' + l.color + ';color:' + onColor(l.color) + '"><span class="ttl">' + esc(l.title) + '</span>' + (o.sourceName ? '<span class="src">' + esc(o.sourceName) + '</span>' : '') + '<button class="rfo" data-act="refreshOrder" data-id="' + esc(o.id) + '" aria-label="Refresh this order, ' + (o.refreshCount || 0) + ' used" style="color:' + onColor(l.color) + '">' + icon('refresh') + '</button></div>' +
+      ((o.refreshResult && now() - (o.refreshResultAt || 0) < 30000) ? '<div class="act">' + esc(o.refreshResult) + '</div>' : '') +
       ((o.activity && now() - (o.activityAt || 0) < 90000) ? '<div class="act"><span class="spin"></span>' + esc(o.activity) + '…</div>' : '') +
       '<div class="tbody"><div class="row"><div class="no">#' + esc(o.orderNo || '-') + '</div><div class="age mono" data-kind="age" data-since="' + o.createdAt + '" data-work="' + (col === 'NEW' || col === 'ACCEPTED' ? 1 : 0) + '"></div></div>' +
       '<div class="sub">' + esc(o.customerName || 'Customer') + ' · ' + o.itemCount + ' items</div>' +
@@ -654,6 +656,7 @@
     }
     switch (a) {
       case 'accept': case 'ready': case 'done': case 'undo': case 'dismiss': case 'acceptAll': case 'gotit': case 'startpin': case 'retry': return act(a, id, arg);
+      case 'refreshOrder': { const o = (S.data.orders || []).find((x) => x.id === id); await act('refreshOrder', id, ''); return toast('Refresh sent for #' + ((o && o.orderNo) || '-')); }
       case 'print': await act('print', id); return toast('Sent to the KDS printer');
       case 'refreshAll': await act('refresh', '', ''); return toast('Refresh sent to the order phones');
       case 'refreshStore': await act('refresh', '', arg); return toast('Refresh sent');

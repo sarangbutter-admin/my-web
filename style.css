@@ -225,3 +225,9 @@ html[data-theme="light"] .attn { background: #ffe0b2; }
 .marq.ticker { background: #1a1a1a; color: #fff; } .marq.ticker.alarm { animation: tick 1.6s ease-in-out infinite alternate; }
 @keyframes tick { from { background: #1a1a1a; } to { background: #8e0000; } }
 @media (prefers-reduced-motion: reduce) { .ticket.cancelled, .marq.ticker.alarm { animation: none; } }
+
+/* ---------- refresh button on each ticket's bar ---------- */
+.rfo { margin-left: 4px; width: 40px; height: 40px; border: 0; border-radius: 20px; background: transparent; display: inline-flex; align-items: center; justify-content: center; flex: none; position: relative; }
+.rfo:hover { background: rgba(255,255,255,.18); } .rfo svg.i { width: 20px; height: 20px; }
+.rfo::after { content: ""; position: absolute; inset: -4px; }
+.tband .src { margin-left: auto; }
